@@ -2,6 +2,8 @@
 
 An AI-powered mock interview platform built using **Python, Streamlit, and Groq LLM APIs**.
 
+Live demo- https://ai-interview-practice-system-gxzntc6pz3qjplnnknvzsd.streamlit.app/
+
 ## Features
 - HR, Technical, and Managerial interview modes
 - AI-generated follow-up questions
