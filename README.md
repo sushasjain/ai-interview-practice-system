@@ -1,6 +1,6 @@
 # AI Interview Practice & Feedback System
 
-An AI-powered mock interview platform built using **Python, Streamlit, and Groq LLM APIs**.
+An AI-powered mock interview platform built using **Python, Streamlit, and Large Language Model APIs (Groq / Gemini)**.
 
 Live demo- https://ai-interview-practice-system-gxzntc6pz3qjplnnknvzsd.streamlit.app/
 
