@@ -1,13 +1,17 @@
 import streamlit as st
 import random
 import os
-from groq import Groq
+import google.generativeai as genai
 
 # -----------------------------
-# Setup
+# Configure Gemini API
 # -----------------------------
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
 
+# -----------------------------
+# Page Setup
+# -----------------------------
 st.set_page_config(page_title="AI Interview Practice System", layout="centered")
 
 st.title("🎤 AI Interview Practice System")
@@ -24,140 +28,97 @@ INTERVIEW_QUESTIONS = {
         "What are your strengths and weaknesses?"
     ],
     "Technical Interview": [
-        "Explain OOP concepts.",
-        "What is REST API?",
-        "Explain difference between list and tuple.",
-        "What is DBMS?"
+        "Explain Object-Oriented Programming principles.",
+        "What is the difference between a process and a thread?",
+        "Explain REST API.",
+        "What is a database index?"
     ],
     "Managerial Interview": [
-        "How do you handle conflict in a team?",
-        "Describe a leadership experience.",
-        "How do you prioritize tasks?"
+        "How do you prioritize tasks?",
+        "Describe a time you resolved a team conflict.",
+        "How do you manage tight deadlines?",
+        "How do you motivate team members?"
     ]
 }
 
 # -----------------------------
-# Session State
+# AI Function
 # -----------------------------
-if "question" not in st.session_state:
-    st.session_state.question = None
+def ask_ai(prompt):
+    response = model.generate_content(prompt)
+    return response.text
 
-if "followup_question" not in st.session_state:
-    st.session_state.followup_question = None
-
-if "step" not in st.session_state:
-    st.session_state.step = 0  # 0=not started, 1=first answer, 2=followup, 3=evaluation
 
 # -----------------------------
-# Interview Selection
+# Interview Type
 # -----------------------------
-interview_type = st.selectbox("Select Interview Type", list(INTERVIEW_QUESTIONS.keys()))
+interview_type = st.selectbox(
+    "Select Interview Type",
+    list(INTERVIEW_QUESTIONS.keys())
+)
 
+# -----------------------------
+# Generate Question
+# -----------------------------
 if st.button("Generate Interview Question"):
-    st.session_state.question = random.choice(INTERVIEW_QUESTIONS[interview_type])
-    st.session_state.followup_question = None
-    st.session_state.step = 1
+    question = random.choice(INTERVIEW_QUESTIONS[interview_type])
+    st.session_state["question"] = question
 
 # -----------------------------
-# Show Main Question
+# Show Question
 # -----------------------------
-if st.session_state.question:
+if "question" in st.session_state:
     st.subheader("Interview Question")
-    st.write(st.session_state.question)
+    st.write(st.session_state["question"])
 
 # -----------------------------
-# First Answer
+# User Answer
 # -----------------------------
-if st.session_state.step == 1:
-    user_answer = st.text_area("Your Answer")
-
-    if st.button("Submit Answer"):
-        if user_answer.strip() == "":
-            st.warning("Please write an answer.")
-        else:
-            # Generate follow-up question using AI
-            prompt = f"""
-You are an interviewer.
-
-Main Question:
-{st.session_state.question}
-
-Candidate Answer:
-{user_answer}
-
-Generate ONE relevant follow-up interview question.
-Only output the question.
-"""
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.6,
-                max_tokens=100
-            )
-
-            st.session_state.followup_question = response.choices[0].message.content.strip()
-            st.session_state.first_answer = user_answer
-            st.session_state.step = 2
+user_answer = st.text_area("Your Answer")
 
 # -----------------------------
-# Follow-up Question (Mandatory)
+# Submit Answer
 # -----------------------------
-if st.session_state.step == 2:
-    st.subheader("Follow-up Question")
-    st.write(st.session_state.followup_question)
+if st.button("Submit Answer"):
 
-    followup_answer = st.text_area("Your Follow-up Answer")
+    if user_answer and "question" in st.session_state:
 
-    if st.button("Submit Follow-up Answer"):
-        if followup_answer.strip() == "":
-            st.warning("Please answer the follow-up question.")
-        else:
-            st.session_state.followup_answer = followup_answer
-            st.session_state.step = 3
+        question = st.session_state["question"]
 
-# -----------------------------
-# Final AI Evaluation
-# -----------------------------
-if st.session_state.step == 3:
-    st.subheader("⭐ AI Feedback")
+        # -------- AI Evaluation Prompt --------
+        feedback_prompt = f"""
+        Interview Question: {question}
 
-    evaluation_prompt = f"""
-You are an interview evaluator.
+        Candidate Answer: {user_answer}
 
-Question:
-{st.session_state.question}
+        Evaluate this interview answer professionally.
 
-Candidate Answer:
-{st.session_state.first_answer}
+        Provide:
 
-Follow-up Question:
-{st.session_state.followup_question}
+        Strengths:
+        Improvements:
+        Score out of 10:
+        """
 
-Follow-up Answer:
-{st.session_state.followup_answer}
+        feedback = ask_ai(feedback_prompt)
 
-Provide:
+        st.subheader("⭐ AI Feedback")
+        st.write(feedback)
 
-1. Strengths (bullet points)
-2. Improvements (bullet points)
-3. Ideal Answer (short)
-4. Score (0-10)
+        # -------- Follow-up Question --------
+        followup_prompt = f"""
+        Based on the interview question:
 
-Format clearly with headings.
-"""
+        {question}
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": evaluation_prompt}],
-        temperature=0.5,
-        max_tokens=500
-    )
+        and the candidate answer:
 
-    feedback_text = response.choices[0].message.content
+        {user_answer}
 
-    st.markdown(feedback_text)
+        Generate a realistic follow-up interview question.
+        """
 
-    if st.button("Start New Interview"):
-        st.session_state.step = 0
-        st.session_state.question = None
-        st.session_state.followup_question = None
+        followup = ask_ai(followup_prompt)
+
+        st.subheader("Follow-up Question")
+        st.write(followup)
