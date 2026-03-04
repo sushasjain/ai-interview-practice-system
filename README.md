@@ -13,7 +13,7 @@ Live demo- https://ai-interview-practice-system-gxzntc6pz3qjplnnknvzsd.streamlit
 ## Tech Stack
 - Python
 - Streamlit
-- Groq LLM API
+- LLM API
 
 ## How to Run
 ```bash
